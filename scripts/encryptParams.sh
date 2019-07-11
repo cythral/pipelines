@@ -13,8 +13,8 @@ encrypt() {
 # encrypt the parameters + setup parameter files
 mkdir -p deploy/webhook
 
-encryptedGithubToken=$(encrypt "$githubToken" "$account");
-encryptedGithubSigningSecret=$(encrypt "$githubSigningSecret" "$account")
+encryptedGithubToken=$(encrypt "$githubToken");
+encryptedGithubSigningSecret=$(encrypt "$githubSigningSecret")
 
 params=$(echo '{}' | jq ".GithubToken=\"$encryptedGithubToken\"");
 params=$(echo "$params" | jq ".GithubSigningSecret=\"$encryptedGithubSigningSecret\"");

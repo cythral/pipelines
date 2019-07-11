@@ -154,6 +154,17 @@ Resources:
         - !Ref Subnet5
         - !Ref Subnet6
 
+  Port80Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: "404"
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
 Outputs:  
   VpcId:
     Value: !Ref Vpc
@@ -206,7 +217,13 @@ Outputs:
       Name: !Sub ${AWS::StackName}:LoadBalancerDNSName
 
   LoadBalancerCanonicalHostedZoneId:
-    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneId
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
     Description: Canonical hosted zone id of the application load balancer
     Export:
       Name: !Sub ${AWS::StackName}:LoadBalancerCanonicalHostedZoneId
+
+  Port80ListenerArn:
+    Value: !Ref Port80Listener
+    Description: ID of the port 80 listener for the application load balancer
+    Export:
+      Name: !Sub ${AWS::StackName}:Port80ListenerArn
