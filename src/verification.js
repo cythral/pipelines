@@ -4,8 +4,7 @@ function hash(payload, secretKey) {
     return `sha1=${HmacSHA1(payload, secretKey)}`;
 }
 
-function verify(body, signature, secretKey) {
-    let payload = JSON.stringify(body);
+function verify(payload, signature, secretKey) {
     let actual = hash(payload, secretKey);
     
     console.log(`verifying ${payload} against ${signature}`);

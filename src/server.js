@@ -1,5 +1,5 @@
 const express = require("express");
-const { json } = require("body-parser");
+const { text } = require("body-parser");
 const app = express();
 const { handle } = require("./webhook");
 
@@ -22,7 +22,7 @@ void async function main() {
         error("Invalid Github Signing Secret (token used to verify requests are coming from GitHub)");
     }
 
-    app.use(json());
+    app.use(text({ type: "*/*" }));
 
     app.get("/healthcheck", (request, response) => {
         response.status(200);
