@@ -18,4 +18,5 @@ decrypt() {
 export GITHUB_TOKEN=$(decrypt "$ENCRYPTED_GITHUB_TOKEN");
 export GITHUB_SIGNING_SECRET=$(decrypt "$ENCRYPTED_GITHUB_SIGNING_SECRET");
 
+echo $GITHUB_SIGNING_SECRET;
 node src/server.js
