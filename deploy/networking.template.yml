@@ -1,0 +1,206 @@
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+  
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref Vpc
+  
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+    
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.0.0/20
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - !GetAZs us-east-1
+  
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet1
+  
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.16.0/20
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - !GetAZs us-east-1
+  
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet2
+
+  Subnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.32.0/20
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - !GetAZs us-east-1
+  
+  Subnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet3
+
+  Subnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.48.0/20
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 3
+          - !GetAZs us-east-1
+  
+  Subnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet4
+
+  Subnet5:
+    Type: AWS::EC2::Subnet  
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.64.0/20
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 4
+          - !GetAZs us-east-1
+  
+  Subnet5RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet5
+
+  Subnet6:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.80.0/20
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 5
+          - !GetAZs us-east-1
+
+  Subnet6RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet6
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public facing security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref Vpc
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Name: pipelines-load-balancer
+      SecurityGroups:
+        - !GetAtt SecurityGroup.GroupId
+      Subnets: 
+        - !Ref Subnet1
+        - !Ref Subnet2
+        - !Ref Subnet3
+        - !Ref Subnet4
+        - !Ref Subnet5
+        - !Ref Subnet6
+
+Outputs:  
+  VpcId:
+    Value: !Ref Vpc
+    Description: ID of the primary VPC
+    Export:
+      Name: !Sub ${AWS::StackName}:VpcId
+  
+  SubnetIds:
+    Value:
+      !Join
+        - ","
+        - - !Ref Subnet1
+          - !Ref Subnet2
+          - !Ref Subnet3
+          - !Ref Subnet4
+          - !Ref Subnet5
+          - !Ref Subnet6
+    Description: List of the ids of the primary subnets
+    Export:
+      Name: !Sub ${AWS::StackName}:SubnetIds
+
+  PrimarySecurityGroupName:
+    Value: !Ref SecurityGroup
+    Description: Name of the primary security group
+    Export:
+      Name: !Sub ${AWS::StackName}:PrimarySecurityGroupName
+
+  PrimarySecurityGroupId:
+    Value: !GetAtt SecurityGroup.GroupId
+    Description: Group Id of the primary security group (public facing)
+    Export:
+      Name: !Sub ${AWS::StackName}:PrimarySecurityGroupId
+
+  LoadBalancerArn:
+    Value: !Ref ApplicationLoadBalancer
+    Description: ARN of the application load balancer
+    Export:
+      Name: !Sub ${AWS::StackName}:LoadBalancerArn
+
+  LoadBalancerFullName:
+    Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+    Description: Full name of the application load balancer
+    Export:
+      Name: !Sub ${AWS::StackName}:LoadBalancerFullName
+
+  LoadBalancerDNSName:
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Description: DNS name of the application load balancer
+    Export:
+      Name: !Sub ${AWS::StackName}:LoadBalancerDNSName

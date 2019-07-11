@@ -1,0 +1,53 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    commands:
+      - pip install cfn-lint
+      - npm install
+  pre_build:
+    commands:
+      - $(aws ecr get-login --no-include-email)
+  build:
+    commands:
+      # Run unit tests
+      - npm test
+
+      - zip -jr deploy/accounts.zip src/accounts/*
+
+      # Lint, validate and package all templates
+      - |
+        for template in $(find deploy -type f -path '*.template.yml'); do \
+          stackName=$(echo $template | xargs basename | sed "s/.template.yml//g"); \
+          cfn-lint $template; \
+          aws cloudformation validate-template --template-body file://$template; \
+          aws cloudformation package \
+            --template-file $template \
+            --s3-bucket $ARTIFACT_STORE \
+            --s3-prefix packageArtifacts \
+            --output-template-file $stackName.template.packaged.yml; \
+        done
+
+      # Setup Webhook + Networking Config Files
+      - params=$(cat deploy/webhook/params.json);
+      - config='{}';
+      - config=$(echo "$config" | jq --argjson params "$params" '.Parameters=$params');
+      - config=$(echo "$config" | jq ".Parameters.Image=\"$REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION\"")
+      - echo "$config" >> deploy/webhook/webhook.config.json
+
+      # Setup Security Config File
+      - configFile=$(echo '{"Parameters":{}}' | jq ".Parameters.ParentAccountId=\"$ACCOUNT_ID\"");
+      - echo "$configFile" > deploy/security.config.json
+
+      # Build Docker Image
+      - docker build -t "$REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION" .
+  post_build:
+    commands:
+      - docker push "$REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION"
+
+artifacts:
+  discard-paths: yes
+  files:
+    - "**/*.packaged.yml"
+    - "**/*.config.json"

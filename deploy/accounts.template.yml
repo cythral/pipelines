@@ -1,0 +1,92 @@
+Transform:
+  - AWS::Serverless-2016-10-31
+Resources:
+  CreateAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./accounts.zip
+      Handler: createAccount.handler
+      Runtime: nodejs10.x
+      FunctionName: create-account
+      Timeout: 900
+      Policies:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  BootstrapSecurityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./accounts.zip
+      Handler: bootstrapSecurity.handler
+      Runtime: nodejs10.x
+      FunctionName: bootstrap-account-security
+      Timeout: 900
+      Policies:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  AssociateHostedZoneFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./accounts.zip
+      Handler: associateHostedZone.handler
+      Runtime: nodejs10.x
+      FunctionName: associate-hosted-zone
+      Role: !ImportValue pipelines-security:PipelineRoleArn
+
+  DevAccount:
+    Type: Custom::Account
+    DependsOn:
+      - BootstrapSecurityFunction
+    Properties:
+      ServiceToken: !GetAtt CreateAccountFunction.Arn
+      AccountName: Cythral Development
+      Email: aws+dev@cythral.com
+      Version: 2
+  
+  ProdAccount:
+    Type: Custom::Account
+    DependsOn: 
+      - BootstrapSecurityFunction
+    Properties:
+      ServiceToken: !GetAtt CreateAccountFunction.Arn
+      AccountName: Cythral Production
+      Email: aws+prod@cythral.com
+      Version: 2
+      
+Outputs:
+  AccountIds:
+    Value: !Join
+      - ","
+      - - !GetAtt DevAccount.AccountId
+        - !GetAtt ProdAccount.AccountId
+    Export:
+      Name: !Sub ${AWS::StackName}:AccountIds
+      
+  OrganizationId:
+    Value: !GetAtt DevAccount.OrganizationId
+    Export:
+      Name: !Sub ${AWS::StackName}:OrganizationId
+
+  OrganizationArn:
+    Value: !Sub arn:aws:organizations::${AWS::AccountId}:organization/${DevAccount.OrganizationId}
+    Export:
+      Name: !Sub ${AWS::StackName}:OrganizationArn
+      
+  DevAccountId:
+    Value: !GetAtt DevAccount.AccountId
+    Export:
+      Name: !Sub ${AWS::StackName}:DevAccountId
+
+  DevDeployerArn:
+    Value: !Sub arn:aws:iam::${DevAccount.AccountId}:role/Deployer
+    Export:
+      Name: !Sub ${AWS::StackName}:DevDeployerArn
+
+  ProdAccountId:
+    Value: !GetAtt ProdAccount.AccountId
+    Export:
+      Name: !Sub ${AWS::StackName}:ProdAccountId
+
+  ProdDeployerArn:
+    Value: !Sub arn:aws:iam::${ProdAccount.AccountId}:role/Deployer
+    Export:
+      Name: !Sub ${AWS::StackName}:ProdDeployerArn

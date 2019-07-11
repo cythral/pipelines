@@ -1,0 +1,132 @@
+Parameters:
+  ParentAccountId:
+    Type: String
+    Default: ""
+    Description: ID of the parent/shared account
+
+Conditions:
+  IsParentAccount: !Equals [!Ref ParentAccountId, ""]
+  IsNotParentAccount: !Not [!Condition IsParentAccount]
+  
+Resources:
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Condition: IsParentAccount
+    Properties:
+      RoleName: Pipeline
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  DeployerRole:
+    Type: AWS::IAM::Role
+    Condition: IsNotParentAccount
+    Properties:
+      RoleName: Deployer
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS: !Sub arn:aws:iam::${ParentAccountId}:role/Pipeline
+              Service: cloudformation.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  PipelineKey:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          Fn::If:
+            - IsNotParentAccount
+            - - Effect: Allow
+                Action: 
+                  - kms:Encrypt
+                  - kms:DescribeKey
+                Resource: "*"
+                Principal:
+                  AWS: !Sub arn:aws:iam::${ParentAccountId}:root
+              - Effect: Allow
+                Action: kms:*
+                Resource: "*"
+                Principal:
+                  AWS: !Sub arn:aws:iam::${AWS::AccountId}:root 
+            - - Effect: Allow
+                Action: kms:*
+                Resource: "*"
+                Principal:
+                  AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            
+  PipelineKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/PIPELINE_KEY
+      TargetKeyId: !Ref PipelineKey
+  
+  PipelineKeyEncryptPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: PipelineKeyEncryptAccess
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: kms:Encrypt
+            Resource: !GetAtt PipelineKey.Arn
+  
+  PipelineKeyDecryptPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: PipelineKeyDecryptAccess
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt PipelineKey.Arn
+
+Outputs:
+  PipelineRoleArn:
+    Condition: IsParentAccount
+    Value: !GetAtt PipelineRole.Arn
+    Description: ARN of the pipeline role
+    Export:
+      Name: !Sub ${AWS::StackName}:PipelineRoleArn
+  
+  DeployerRoleArn:
+    Condition: IsNotParentAccount
+    Value: !GetAtt DeployerRole.Arn
+    Description: ARN of the deployer role
+    Export:
+      Name: !Sub ${AWS::StackName}:DeployerRoleArn
+  
+  PipelineKeyArn:
+    Value: !GetAtt PipelineKey.Arn
+    Description: ARN of the pipeline kms key
+    Export:
+      Name: !Sub ${AWS::StackName}:PipelineKeyArn
+
+  PipelineKeyDecryptPolicyArn:
+    Value: !Ref PipelineKeyDecryptPolicy
+    Description: ARN of the pipeline kms key decryption policy
+    Export:
+      Name: !Sub ${AWS::StackName}:PipelineKeyDecryptPolicyArn
+
+  PipelineKeyEncryptPolicyArn:
+    Value: !Ref PipelineKeyEncryptPolicy
+    Description: ARN of the pipeline kms key encryption policy
+    Export:
+      Name: !Sub ${AWS::StackName}:PipelineKeyEncryptPolicyArn

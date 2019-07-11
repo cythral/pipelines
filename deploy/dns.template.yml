@@ -1,0 +1,23 @@
+Parameters:
+  DomainName:
+    Type: String
+    Description: Domain name to use for infrastructure projects
+
+Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub ${DomainName}.
+
+Outputs:
+  HostedZoneId:
+    Value: !Ref HostedZone
+    Description: ID of the primary infrastructure hosted zone
+    Export:
+      Name: !Sub ${AWS::StackName}:HostedZoneId
+
+  HostedZoneNameServers:
+    Value: !Join [",", !GetAtt HostedZone.NameServers]
+    Description: List of nameservers being used by the primary hosted zone
+    Export:
+      Name: !Sub ${AWS::StackName}:HostedZoneNameServers

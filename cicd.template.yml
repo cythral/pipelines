@@ -1,0 +1,352 @@
+Description: Stack for deploying the cicd resource deployer 
+Parameters:
+  
+  GithubToken:
+    Type: String
+    Description: OAuth Token for Github
+    NoEcho: true
+
+  GithubOwner:
+    Type: String
+    Default: cythral
+    Description: Owner of the github repository to track
+
+  GithubRepo:
+    Type: String
+    Default: pipelines
+    Description: Name of the github repository to track
+
+  GithubBranch:
+    Type: String
+    Default: master
+    Description: Branch in the github repository to track
+
+Resources:
+  ArtifactRepo:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-artifact-repository
+
+  ArtifactRepoPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactRepo
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement: 
+          - Effect: Allow
+            Action: s3:*
+            Resource: 
+              - !Sub arn:aws:s3:::${ArtifactRepo}
+              - !Sub arn:aws:s3:::${ArtifactRepo}/*
+            Principal:
+              AWS:
+                - !Ref AWS::AccountId
+                - !ImportValue pipelines-accounts:DevAccountId
+                - !ImportValue pipelines-accounts:ProdAccountId
+
+  ArtifactKey:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: kms:*
+            Resource: "*"
+            Principal:
+              AWS: !Ref AWS::AccountId
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+            Resource: "*"
+            Principal:
+              AWS: !ImportValue pipelines-security:PipelineRoleArn
+          - Effect: Allow
+            Action: 
+              - kms:Decrypt
+            Resource: "*"
+            Principal:
+              AWS: 
+                - !ImportValue pipelines-accounts:DevDeployerArn
+                - !ImportValue pipelines-accounts:ProdDeployerArn
+
+  DockerRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryPolicyText:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: 
+                - !Ref AWS::AccountId
+                - !ImportValue pipelines-accounts:DevAccountId
+                - !ImportValue pipelines-accounts:ProdAccountId
+            Action:
+              - ecr:GetAuthorizationToken
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+              - ecr:ListImages
+          - Effect: Allow
+            Principal:
+              AWS: 
+                - !ImportValue pipelines-security:PipelineRoleArn
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - ecr:GetAuthorizationToken
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:ListImages
+              - ecr:BatchCheckLayerAvailability
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+
+  DockerRepoReadAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${AWS::StackName}DockerRepoReadAccess
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - ecr:GetAuthorizationToken
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+              - ecr:ListImages
+            Resource: !GetAtt DockerRepo.Arn
+  
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-build
+      ServiceRole: !ImportValue pipelines-security:PipelineRoleArn
+      EncryptionKey: !GetAtt ArtifactKey.Arn
+      Source:
+        Type: CODEPIPELINE
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Type: LOCAL
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+      Environment:
+        Type: LINUX_CONTAINER
+        PrivilegedMode: true
+        Image: aws/codebuild/standard:2.0
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Name: ARTIFACT_STORE
+            Value: !Ref ArtifactRepo
+          - Name: REPOSITORY_URI
+            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${DockerRepo}
+
+  PipelineWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GithubToken
+      TargetPipeline: !Ref Pipeline
+      TargetPipelineVersion: !GetAtt Pipeline.Version
+      TargetAction: Source
+      RegisterWithThirdParty: true
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: refs/heads/{Branch}
+
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub ${AWS::StackName}-pipeline
+      RoleArn: !ImportValue pipelines-security:PipelineRoleArn
+      RestartExecutionOnUpdate: true
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactRepo
+        EncryptionKey:
+          Id: !Ref ArtifactKey
+          Type: KMS
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: "1"
+              Configuration:
+                PollForSourceChanges: false
+                Owner: !Ref GithubOwner 
+                Repo: !Ref GithubRepo
+                Branch: !Ref GithubBranch
+                OAuthToken: !Ref GithubToken
+              OutputArtifacts:
+                - Name: sourceCode
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName: !Ref BuildProject
+              InputArtifacts:
+                - Name: sourceCode
+              OutputArtifacts:
+                - Name: buildResults
+        - Name: Deploy-Shared
+          Actions:
+            - Name: Security
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-security
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-security:PipelineRoleArn
+                TemplatePath: buildResults::security.template.packaged.yml
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 1
+            - Name: Accounts
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-accounts
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-security:PipelineRoleArn
+                TemplatePath: buildResults::accounts.template.packaged.yml
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 2
+            - Name: Networking
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-networking
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-security:PipelineRoleArn
+                TemplatePath: buildResults::networking.template.packaged.yml
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 3
+            - Name: Webhook
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-webhook
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-security:PipelineRoleArn
+                TemplatePath: buildResults::webhook.template.packaged.yml
+                TemplateConfiguration: buildResults::webhook.config.json
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 4
+        - Name: Deploy-Dev
+          Actions:
+            - Name: Security
+              RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-security
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
+                TemplatePath: buildResults::security.template.packaged.yml
+                TemplateConfiguration: buildResults::security.config.json
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 1
+            - Name: Networking
+              RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-networking
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
+                TemplatePath: buildResults::networking.template.packaged.yml
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 2
+        - Name: Deploy-Prod
+          Actions:
+            - Name: Security
+              RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-security
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
+                TemplatePath: buildResults::security.template.packaged.yml
+                TemplateConfiguration: buildResults::security.config.json
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 1
+            - Name: Networking
+              RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-networking
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
+                TemplatePath: buildResults::networking.template.packaged.yml
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 2
+
+Outputs:
+  DockerRepoReadAccessArn:
+    Value: !Ref DockerRepoReadAccess
+    Description: ARN of the DockerRepoReadAccess managed policy
+    Export:
+      Name: !Sub ${AWS::StackName}:DockerRepoReadAccessArn

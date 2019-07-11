@@ -1,0 +1,36 @@
+{
+  "name": "pipelines",
+  "version": "0.0.0",
+  "description": "Microservice that spins up pipelines for repositories in a GitHub account",
+  "main": "src/server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/cythral/pipelines"
+  },
+  "keywords": [
+    "microservice",
+    "codepipeline",
+    "continuous integration",
+    "continuous deployment"
+  ],
+  "author": "Cythral",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^24.8.0",
+    "jest-fetch-mock": "^2.1.2"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.485.0",
+    "cfn-response": "^1.0.1",
+    "crypto-js": "^3.1.9-1",
+    "deepmerge": "^3.3.0",
+    "express": "^4.17.1",
+    "node-fetch": "^2.6.0"
+  }
+}
