@@ -253,7 +253,7 @@ Resources:
                 ActionMode: REPLACE_ON_FAILURE
                 RoleArn: !ImportValue pipelines-security:PipelineRoleArn
                 TemplatePath: buildResults::dns.template.packaged.yml
-                TemplateConfiguration: buildResults::dns.config.json
+                TemplateConfiguration: buildResults::dns.shared.config.json
                 Capabilities: CAPABILITY_IAM
               InputArtifacts:
                 - Name: buildResults
