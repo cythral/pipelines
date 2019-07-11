@@ -27,6 +27,9 @@ Resources:
     Properties:
       BucketName: !Sub ${AWS::StackName}-artifact-repository
 
+  2ndArtifactRepo:
+    Type: AWS::S3::Bucket
+
   ArtifactRepoPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -366,4 +369,3 @@ Outputs:
     Description: ARN of the DockerRepoReadAccess managed policy
     Export:
       Name: !Sub ${AWS::StackName}:DockerRepoReadAccessArn
-      
