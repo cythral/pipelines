@@ -366,3 +366,4 @@ Outputs:
     Description: ARN of the DockerRepoReadAccess managed policy
     Export:
       Name: !Sub ${AWS::StackName}:DockerRepoReadAccessArn
+      
