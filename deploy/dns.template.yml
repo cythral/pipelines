@@ -9,17 +9,13 @@ Resources:
     Properties:
       Name: !Sub ${DomainName}.
 
-  ApexRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: !Sub ${DomainName}.
-      Name: !Ref DomainName
-      Type: A
-      AliasTarget:
-        HostedZoneId: !ImportValue pipelines-networking:LoadBalancerCanonicalHostedZoneId
-        DNSName: !ImportValue pipelines-networking:LoadBalancerDNSName
-
 Outputs:
+  DomainName:
+    Value: !Ref DomainName
+    Description: Primary infrastructure domain name
+    Export:
+      Name: !Sub ${AWS::StackName}:DomainName
+      
   HostedZoneId:
     Value: !Ref HostedZone
     Description: ID of the primary infrastructure hosted zone

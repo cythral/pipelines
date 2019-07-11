@@ -36,11 +36,20 @@ phases:
       - config=$(echo "$config" | jq ".Parameters.Image=\"$REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION\"")
       - echo "$config" >> webhook.config.json
 
-      # Setup DNS Config File
-      - params=$(cat deploy/params.json | jq ".Dns");
+      # Setup Networking Config File
+      - params=$(cat deploy/params.json | jq ".Networking");
       - config='{}';
       - config=$(echo "$config" | jq --argjson params "$params" '.Parameters=$params');
-      - echo "$config" >> dns.config.json
+      - echo "$config" >> networking.config.json
+
+      # Setup DNS Config Files
+      - |
+        for envName in $(cat deploy/params.json | jq -r '.Dns | keys | .[]'); do \
+          config='{}'; \
+          params=$(cat deploy/params.json | jq ".Dns.${envName}"); \
+          config=$(echo "$config" | jq --argjson params "$params" '.Parameters=$params'); \
+          echo "$config" >> dns.${envName}.config.json; \
+        done
 
       # Setup Security Config File
       - configFile=$(echo '{"Parameters":{}}' | jq ".Parameters.ParentAccountId=\"$ACCOUNT_ID\"");

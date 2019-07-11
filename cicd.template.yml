@@ -242,21 +242,6 @@ Resources:
               InputArtifacts:
                 - Name: buildResults
               RunOrder: 2
-            - Name: Networking
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CloudFormation
-                Version: "1"
-              Configuration:
-                StackName: pipelines-networking
-                ActionMode: REPLACE_ON_FAILURE
-                RoleArn: !ImportValue pipelines-security:PipelineRoleArn
-                TemplatePath: buildResults::networking.template.packaged.yml
-                Capabilities: CAPABILITY_IAM
-              InputArtifacts:
-                - Name: buildResults
-              RunOrder: 3
             - Name: DNS
               ActionTypeId:
                 Category: Deploy
@@ -269,6 +254,21 @@ Resources:
                 RoleArn: !ImportValue pipelines-security:PipelineRoleArn
                 TemplatePath: buildResults::dns.template.packaged.yml
                 TemplateConfiguration: buildResults::dns.config.json
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 3
+            - Name: Networking
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-networking
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-security:PipelineRoleArn
+                TemplatePath: buildResults::networking.template.packaged.yml
                 Capabilities: CAPABILITY_IAM
               InputArtifacts:
                 - Name: buildResults
@@ -308,6 +308,23 @@ Resources:
               InputArtifacts:
                 - Name: buildResults
               RunOrder: 1
+            - Name: DNS
+              RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-dns
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
+                TemplatePath: buildResults::dns.template.packaged.yml
+                TemplateConfiguration: buildResults::dns.dev.config.json
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 2
             - Name: Networking
               RoleArn: !ImportValue pipelines-accounts:DevDeployerArn
               ActionTypeId:
@@ -323,7 +340,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM
               InputArtifacts:
                 - Name: buildResults
-              RunOrder: 2
+              RunOrder: 3
         - Name: Deploy-Prod
           Actions:
             - Name: Security
@@ -343,6 +360,23 @@ Resources:
               InputArtifacts:
                 - Name: buildResults
               RunOrder: 1
+            - Name: DNS
+              RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                StackName: pipelines-dns
+                ActionMode: REPLACE_ON_FAILURE
+                RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
+                TemplatePath: buildResults::dns.template.packaged.yml
+                TemplateConfiguration: buildResults::dns.prod.config.json
+                Capabilities: CAPABILITY_IAM
+              InputArtifacts:
+                - Name: buildResults
+              RunOrder: 2
             - Name: Networking
               RoleArn: !ImportValue pipelines-accounts:ProdDeployerArn
               ActionTypeId:
@@ -358,7 +392,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM
               InputArtifacts:
                 - Name: buildResults
-              RunOrder: 2
+              RunOrder: 3
 
 Outputs:
   DockerRepoReadAccessArn:

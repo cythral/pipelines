@@ -158,12 +158,42 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions: 
+        - Type: redirect
+          RedirectConfig:
+            StatusCode: 301
+            Protocol: HTTPS
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  Port443Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
         - Type: fixed-response
           FixedResponseConfig:
             StatusCode: "404"
       LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref PrimarySSLCertificate
+
+  PrimarySSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !ImportValue pipelines-dns:DomainName
+      ValidationMethod: EMAIL
+
+  ApexRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !ImportValue pipelines-dns:HostedZoneId
+      Name: !ImportValue pipelines-dns:DomainName
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt ApplicationLoadBalancer.DNSName
 
 Outputs:  
   VpcId:
@@ -227,3 +257,9 @@ Outputs:
     Description: ID of the port 80 listener for the application load balancer
     Export:
       Name: !Sub ${AWS::StackName}:Port80ListenerArn
+
+  Port443ListenerArn:
+    Value: !Ref Port43Listener
+    Description: ID of the port 443 listener for the application load balancer
+    Export:
+      Name: !Sub ${AWS::StackName}:Port443ListenerArn

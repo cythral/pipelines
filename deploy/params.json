@@ -4,6 +4,14 @@
     "GithubSigningSecret": "AQICAHg13leBVJPHrvH9NE4lC9XaQltFgoV8PP7EybGrlRxByAFDKYJu7bNaX+jkDLo/LM7hAAAAfDB6BgkqhkiG9w0BBwagbTBrAgEAMGYGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMPjZY96PsNh9u1/TjAgEQgDkgPnzklMkQ9JN7oB+4YGGZOavpnzDgxqhK+PA7VC0MrM/eSja5iO676qTXggzkQvmEg3Ho+JqDlCc="
   },
   "Dns": {
-    "DomainName": "brigh.id"
+    "shared": {
+      "DomainName": "brigh.id"
+    },
+    "dev": {
+      "DomainName": "dev.brigh.id"
+    },
+    "prod": {
+      "DomainName": "prod.brigh.id"
+    }
   }
 }
