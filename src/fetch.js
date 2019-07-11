@@ -13,6 +13,7 @@ async function fetchFileFromContentsUrl(fileName, contentsUrl, githubToken = pro
         });
 
         let payload = await response.json();
+        console.log(`received contents payload ${JSON.stringify(payload)}`);
         return Buffer.from(payload.content, "base64").toString();
     } catch(error) {
         return null;
