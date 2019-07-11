@@ -10,7 +10,8 @@ decrypt() {
 
     TMP_FILE=$(mktemp);
     echo "$ENCRYPTED_VAR" | base64 -d > $TMP_FILE
-    echo $(aws kms decrypt --ciphertext-blob fileb://$TMP_FILE --query Plaintext --output text);
+    text=$(aws kms decrypt --ciphertext-blob fileb://$TMP_FILE --query Plaintext --output text);
+    echo "$text" | base64 -d;
     rm $TMP_FILE;
 }
 
