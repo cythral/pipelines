@@ -29,7 +29,6 @@ void async function main() {
 
     app.post("*", async (request, response) => {
         try {
-            console.log(JSON.stringify(request.headers));
             let result = await handle(
                 request.headers["x-github-event"],
                 request.body,

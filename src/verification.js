@@ -6,6 +6,8 @@ function hash(payload, secretKey) {
 
 function verify(payload, signature, secretKey) {
     let actual = hash(payload, secretKey);
+    
+    console.log(`verifying ${payload} against ${signature}`);
     return signature === actual;
 }
 
