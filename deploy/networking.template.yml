@@ -259,7 +259,7 @@ Outputs:
       Name: !Sub ${AWS::StackName}:Port80ListenerArn
 
   Port443ListenerArn:
-    Value: !Ref Port43Listener
+    Value: !Ref Port443Listener
     Description: ID of the port 443 listener for the application load balancer
     Export:
       Name: !Sub ${AWS::StackName}:Port443ListenerArn
