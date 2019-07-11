@@ -38,7 +38,7 @@ void async function main() {
                 request.headers['x-hub-signature']
             );
             response.status(200);
-            response.write(result);
+            response.write(result || "OK");
         } catch(error) {
             response.status(500);
             response.write(ENV === "production" ? "Internal Server Error" : error.toString());

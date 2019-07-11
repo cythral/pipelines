@@ -12,7 +12,7 @@ async function fetchFileFromContentsUrl(fileName, contentsUrl, githubToken = pro
             }
         });
 
-        if(response.status === 404) {
+        if(response.status !== 200) {
             return null;
         }
 
