@@ -22,11 +22,8 @@ Resources:
       Name: brigh.id
       Type: A
       AliasTarget:
-        HostedZoneId: !ImportValue pipelines-dns:HostedZoneId
-        DNSName:
-          Fn::Sub:
-            - dualstack.${Domain}
-            - Domain: !ImportValue pipelines-networking:LoadBalancerDNSName
+        HostedZoneId: !ImportValue pipelines-networking:LoadBalancerCanonicalHostedZoneId
+        DNSName: !ImportValue pipelines-networking:LoadBalancerDNSName
 
   TaskRole:
     Type: AWS::IAM::Role
