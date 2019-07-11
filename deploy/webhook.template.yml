@@ -15,12 +15,25 @@ Parameters:
     Description: Secret used to sign incoming requests from GitHub.
 
 Resources:
+  CloudFormationAdminPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: CloudFormationAdmin
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: cloudformation:*
+            Resource: "*"
+              
+
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
         - !ImportValue pipelines-security:PipelineKeyDecryptPolicyArn
+        - !Ref CloudFormationAdminPolicy
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -104,13 +117,13 @@ Resources:
       TargetType: ip
       VpcId: !ImportValue pipelines-networking:VpcId
       HealthCheckPath: /healthcheck
-      HealthCheckPort: 80
+      HealthCheckPort: "80"
       HealthCheckProtocol: HTTP
       Protocol: HTTP
       Port: 80
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 30
+          Value: "30"
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
