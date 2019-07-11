@@ -15,25 +15,13 @@ Parameters:
     Description: Secret used to sign incoming requests from GitHub.
 
 Resources:
-  CloudFormationAdminPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: CloudFormationAdmin
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action: cloudformation:*
-            Resource: "*"
-              
-
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
         - !ImportValue pipelines-security:PipelineKeyDecryptPolicyArn
-        - !Ref CloudFormationAdminPolicy
+        - arn:aws:iam::aws:policy/AdministratorAccess
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
