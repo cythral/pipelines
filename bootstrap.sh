@@ -6,12 +6,17 @@ securityStackName=pipelines-security
 securityStackTemplate=deploy/security.template.yml
 githubToken=
 githubSigningSecret=
+domainName=
 
 error() {
     echo $1
     exit 1
 }
 
+encrypt() {
+    toEncrypt=$1
+    echo $(aws kms encrypt --key-id alias/PIPELINE_KEY --plaintext $toEncrypt --query CiphertextBlob --output text);
+}
 
 while :; do
     case $1 in
@@ -20,7 +25,7 @@ while :; do
                 githubToken=$2
                 shift
             else
-                error "--githubToken requires a token to be specified"
+                error "--githubToken requires a value"
             fi
             ;;
 
@@ -29,7 +34,16 @@ while :; do
                 githubSigningSecret=$2
                 shift
             else
-                error "--githubSigningSecret requires a token to be specified"
+                error "--githubSigningSecret requires a value"
+            fi
+            ;;
+
+        --domainName)
+            if [ "$2" ]; then
+                domainName=$2
+                shift
+            else
+                error "--domainName requires a value"
             fi
             ;;
 
@@ -47,11 +61,15 @@ done
 
 
 if [ "$githubToken" = "" ]; then
-    error "Github Token must be specified"
+    error "--githubToken is required"
 fi
 
 if [ "$githubSigningSecret" = "" ]; then
-    error "Github Signing Secret must be specified"
+    error "--githubSigningSecret is required"
+fi
+
+if [ "$domainName" = "" ]; then
+    error "--domainName is required"
 fi
 
 # Deploy the storage stack
@@ -92,12 +110,17 @@ aws cloudformation deploy \
 
 rm -f deploy/accounts.zip
 
-# Encrypt params
-echo "setting up parameters...";
-scripts/encryptParams.sh $githubToken $githubSigningSecret
+# Setup Params
+encryptedGithubToken=$(encrypt "$githubToken");
+encryptedGithubSigningSecret=$(encrypt "$githubSigningSecret")
 
-git add deploy/
-git commit -m "add parameters"
+params=$(echo '{"Webhook":{},"Dns":{}}' | jq ".Webhook.GithubToken=\"$encryptedGithubToken\"");
+params=$(echo "$params" | jq ".Webhook.GithubSigningSecret=\"$encryptedGithubSigningSecret\"");
+params=$(echo "$params" | jq ".Dns.DomainName=\"$domainName\"");
+echo "$params" > deploy/params.json
+
+git add deploy/params.json
+git commit -m "setup parameters"
 git push origin master
 
 # Deploy the pipelines-cicd stack
