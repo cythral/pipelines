@@ -1,0 +1,9 @@
+{
+    "Webhook": {
+        "GithubToken": "AQICAHg13leBVJPHrvH9NE4lC9XaQltFgoV8PP7EybGrlRxByAFQ6SkrMFQ8kQ4nkybpRlmtAAAAhzCBhAYJKoZIhvcNAQcGoHcwdQIBADBwBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDJVaPCHGDrx/hy7PnQIBEIBD4fcHndIyHBtmkJsK9+EEdK3HNDKJyl555Gb1RJGWJcXZuLZnr0LuAjcICfgHHzHSJ5ds6T2IPKbXCSN6P2sonHGvUQ==",
+        "GithubSigningSecret": "AQICAHg13leBVJPHrvH9NE4lC9XaQltFgoV8PP7EybGrlRxByAER0KkfscbhcY0N1Jl3IcbHAAAAfDB6BgkqhkiG9w0BBwagbTBrAgEAMGYGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM4HonvqEAmxxEFE7TAgEQgDki+tsFm/ecKqpzqjs1+s2AJGyCK7WhYy3RHt/FPSBznYf8CrwxSosOY45IaKrbaTtaFUyeL/R+B0I="
+    },
+    "Dns": {
+        "DomainName": "brigh.id"
+    }
+}

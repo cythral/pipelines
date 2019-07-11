@@ -29,12 +29,18 @@ phases:
             --output-template-file $stackName.template.packaged.yml; \
         done
 
-      # Setup Webhook + Networking Config Files
-      - params=$(cat deploy/webhook/params.json);
+      # Setup Webhook Config File
+      - params=$(cat deploy/params.json | jq ".Webhook");
       - config='{}';
       - config=$(echo "$config" | jq --argjson params "$params" '.Parameters=$params');
       - config=$(echo "$config" | jq ".Parameters.Image=\"$REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION\"")
-      - echo "$config" >> deploy/webhook/webhook.config.json
+      - echo "$config" >> webhook.config.json
+
+      # Setup DNS Config File
+      - params=$(cat deploy/params.json | jq ".Dns");
+      - config='{}';
+      - config=$(echo "$config" | jq --argjson params "$params" '.Parameters=$params');
+      - echo "$config" >> dns.config.json
 
       # Setup Security Config File
       - configFile=$(echo '{"Parameters":{}}' | jq ".Parameters.ParentAccountId=\"$ACCOUNT_ID\"");
