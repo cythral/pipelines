@@ -21,6 +21,12 @@ void async function main() {
         error("Invalid Github Signing Secret (token used to verify requests are coming from GitHub)");
     }
 
+    app.get("/healthcheck", (request, response) => {
+        response.status(200);
+        response.write("OK");
+        response.end();
+    });
+
     app.post("*", async (request, response) => {
         try {
             let result = await handle(

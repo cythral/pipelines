@@ -103,6 +103,9 @@ Resources:
     Properties:
       TargetType: ip
       VpcId: !ImportValue pipelines-networking:VpcId
+      HealthCheckPath: /healthcheck
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
       Protocol: HTTP
       Port: 80
 
