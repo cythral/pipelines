@@ -69,7 +69,7 @@ async function handle(
     let template = await fetchTemplate(contentsUrl);
     let config = (await fetchConfig(contentsUrl)) || {};
 
-    config = deepmerge({
+    config = deepmerge(config, {
         StackName: `${repoName}-cicd`,
         TemplateBody: template,
         Parameters: [
@@ -85,8 +85,12 @@ async function handle(
                 ParameterKey: "GithubRepo",
                 ParameterValue: repoName
             }
+        ],
+        Capabilities: [
+            "CAPABILITY_IAM",
+            "CAPABILITY_NAMED_IAM"
         ]
-    }, config);
+    });
 
     await deploy(config);
     return;
