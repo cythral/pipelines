@@ -28,7 +28,7 @@ void async function main() {
                 request.body,
                 request.headers['x-hub-signature']
             );
-            
+            console.log(JSON.stringify(request.headers));
             response.status(200);
             response.write(result);
         } catch(error) {
