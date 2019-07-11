@@ -18,6 +18,10 @@ function mockContentsPayload(fileContents) {
 }
 
 describe("fetchFileFromContentsUrl", () => {
+    beforeEach(() => {
+        jest.resetAllMocks();
+    });
+
     it("should return the utf8 contents from a contents url", async () => {
         let expected = "test file contents";
         fetch.mockResponse(mockContentsPayload(expected));
@@ -34,7 +38,7 @@ describe("fetchFileFromContentsUrl", () => {
     });
 
     it("should return null if the contents url returns a non-200 response", async () => {
-        fetch.mockReject();
+        fetch.mockResponse('{}', { status: 404 });
 
         let result = await fetchFileFromContentsUrl("cicd.template.yml", "https://api.github.com/repos/Cythral/pipelines/contents");
         expect(result).toBeNull();

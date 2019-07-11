@@ -12,8 +12,11 @@ async function fetchFileFromContentsUrl(fileName, contentsUrl, githubToken = pro
             }
         });
 
+        if(response.status === 404) {
+            return null;
+        }
+
         let payload = await response.json();
-        console.log(`received contents payload ${JSON.stringify(payload)}`);
         return Buffer.from(payload.content, "base64").toString();
     } catch(error) {
         return null;
