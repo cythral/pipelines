@@ -160,7 +160,7 @@ Resources:
       DefaultActions: 
         - Type: redirect
           RedirectConfig:
-            StatusCode: 301
+            StatusCode: HTTP_301
             Protocol: HTTPS
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
