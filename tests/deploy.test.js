@@ -30,8 +30,10 @@ const { stackExists, deploy } = require("../src/deploy");
 const aws = require("aws-sdk");
 
 describe("stackExists", () => {
-    afterEach(() => {
+    beforeEach(() => {
         jest.resetAllMocks();
+        aws.CloudFormation.prototype.createStack.mockImplementation(() => new Response(true));
+        aws.CloudFormation.prototype.updateStack.mockImplementation(() => new Response(true));
     });
 
     it("should return true if the stack exists", async () => {
@@ -60,9 +62,12 @@ describe("stackExists", () => {
 });
 
 describe("deploy", () => {
-    afterEach(() => {
+    beforeEach(() => {
         jest.resetAllMocks();
+        aws.CloudFormation.prototype.createStack.mockImplementation(() => new Response(true));
+        aws.CloudFormation.prototype.updateStack.mockImplementation(() => new Response(true));
     });
+
 
     it("should call CloudFormation.createStack with OnFailure = DELETE if the stack does not exist", async () => {
         aws.CloudFormation.prototype.describeStacks.mockImplementation(() => {

@@ -6,9 +6,9 @@ async function deploy(options) {
         return;
     } else if(!await stackExists(options.StackName)) {
         options.OnFailure = "DELETE";
-        cloudformation.createStack(options);
+        await cloudformation.createStack(options).promise();
     } else {
-        cloudformation.updateStack(options);
+        await cloudformation.updateStack(options).promise();
     }
 }
 

@@ -26,6 +26,23 @@ const {
     InvalidContentsUrlError 
 } = require("../src/webhook");
 
+const aws = require("aws-sdk");
+
+class Response {
+    constructor(value) {
+        this.value = value;
+    }
+
+    promise() {
+        return new Promise((resolve) => resolve(this.value));
+    }
+}
+
+beforeEach(() => {
+    aws.CloudFormation.prototype.createStack.mockImplementation(() => new Response(true));
+    aws.CloudFormation.prototype.updateStack.mockImplementation(() => new Response(true));
+});
+
 describe("validateAndRetrieveVars", () => {
     it("should throw a VerificationError if the body does not match the signature", () => {
         const handler = () => validateAndRetrieveVars(
